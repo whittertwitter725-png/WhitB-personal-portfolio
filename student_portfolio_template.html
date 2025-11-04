@@ -1,0 +1,578 @@
+<!-- Chosen Palette: Ball State Cardinals (Cardinal Red/Maroon, Light Gray, White) -->
+<!-- Application Structure Plan: A fixed-sidebar dashboard structure designed for non-linear exploration. The main content is split into five thematic, scrollable sections: 1. Introduction (Persona/Mission), 2. Snapshot Dashboard (Metrics), 3. Academic Foundation (Lists/Charts), 4. Project Showcase (Filterable Cards), and 5. Experience & Recognition (Timelines/Lists). This structure prioritizes immediate delivery of the key personal story before diving into data. -->
+<!-- Visualization & Content Choices:
+1. Report Info -> Introduction (New) -> Goal -> Establish Persona/Connection -> Viz/Presentation Method -> Two-column layout with Profile Image and Mission Statement (HTML/CSS) -> Justification -> Creates instant rapport and communicates goals.
+2. Report Info -> GPA/Metrics -> Goal -> Instant Proof -> Viz/Presentation Method -> Doughnut Chart (Chart.js) and Impact Score (HTML/JS calculated) -> Interaction -> Metric comparison and visual GPA summary -> Justification -> Quick, visual affirmation of academic foundation.
+3. Report Info -> Coursework/Experience -> Goal -> Document Process & Proof -> Viz/Presentation Method -> Dynamic lists/tables (HTML/JS loop) -> Interaction -> Simple list rendering from easy-to-update JSON arrays -> Justification -> Ensures non-technical students can update content without touching HTML.
+4. Report Info -> Projects (C-S-R) -> Goal -> Showcase Outcomes -> Viz/Presentation Method -> Filterable Card Grid (HTML/JS) -> Interaction -> Buttons to filter cards by type (Code, Design, Research) -> Justification -> Allows quick filtering based on recruiter's specific needs.
+CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portfolio Snapshot | [Student Name]</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        /* --- BRANDING VARIABLES (EASY EDIT ZONE) --- */
+        :root {
+            --primary-color: #BA0C2F; /* Cardinal Red (Official HEX) */
+            --secondary-color: #F8F8F8; /* Light Gray for Body Background */
+            --accent-color: #54585A; /* Dark Gray (Official HEX) for text accents */
+            --white-color: #FFFFFF; /* White (Official HEX) for card backgrounds */
+            --supporting-green: #BAD57E; /* Green (Official HEX) for Impact Score */
+            --supporting-blue: #0079A7; /* Blue (Official HEX) for Projects */
+            --supporting-yellow: #FDDE69; /* Yellow (Official HEX) for Awards */
+            --school-name: "BALL STATE UNIVERSITY";
+        }
+        /* --- UTILITY CSS --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--secondary-color);
+        }
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background-color: var(--white-color);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        .nav-link {
+            transition: all 0.2s;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            border-left: 4px solid transparent;
+        }
+        .nav-link:hover {
+            background-color: #F3F4F6;
+        }
+        .nav-link.active {
+            background-color: #F3F4F6;
+            border-left: 4px solid var(--primary-color);
+            font-weight: 600;
+        }
+        .section-content {
+            scroll-margin-top: 20px;
+        }
+        .stat-card {
+            background-color: var(--white-color);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+        .btn-filter.active {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+        }
+        /* Chart container constraint for responsiveness */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            height: 300px;
+            margin: auto;
+        }
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 100%;
+                min-width: 100%;
+                height: auto;
+                position: static;
+                box-shadow: none;
+            }
+        }
+
+        /* Project highlight styling for bold text in C-S-R results */
+        .text-project-highlight {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        /* NEW: Enhance default strong tag appearance for static text */
+        main strong {
+            font-weight: 700;
+            color: var(--accent-color); /* Use Dark Gray for static emphasis */
+        }
+    </style>
+</head>
+<body class="flex flex-col lg:flex-row min-h-screen text-gray-800">
+
+    <!-- Fixed Sidebar Navigation -->
+    <nav class="sidebar p-6 sticky top-0 h-auto lg:h-screen z-10">
+        <div class="mb-6 pb-4 border-b border-gray-200">
+            <!-- Logo Area -->
+            <div class="flex items-center mb-3">
+                <img id="nav-logo" class="h-10 w-10 mr-3 inline-block align-middle rounded-lg" alt="School Logo Placeholder">
+                <p id="nav-school" class="text-xs font-semibold uppercase text-gray-500" style="color: var(--primary-color);">BALL STATE UNIVERSITY</p>
+            </div>
+            <!-- Student Info -->
+            <h1 id="nav-name" class="text-xl font-bold text-gray-900 mt-1">[STUDENT NAME]</h1>
+            <p id="nav-title" class="text-sm text-gray-600 italic">Future-Focused Problem Solver</p>
+        </div>
+
+        <div id="nav-links" class="flex flex-col space-y-2">
+            <a class="nav-link p-3 text-sm active" onclick="scrollToSection('student-introduction')">
+                <span class="mr-2">👤</span> About Me & Mission
+            </a>
+            <a class="nav-link p-3 text-sm" onclick="scrollToSection('snapshot-dashboard')">
+                <span class="mr-2">🚀</span> Snapshot & Impact
+            </a>
+            <a class="nav-link p-3 text-sm" onclick="scrollToSection('academic-foundation')">
+                <span class="mr-2">🧠</span> Academic Foundation
+            </a>
+            <a class="nav-link p-3 text-sm" onclick="scrollToSection('project-showcase')">
+                <span class="mr-2">💡</span> Project Outcomes
+            </a>
+            <a class="nav-link p-3 text-sm" onclick="scrollToSection('recognition-experience')">
+                <span class="mr-2">🏆</span> Experience & Recognition
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content flex-grow p-4 md:p-10 lg:p-12 space-y-12 overflow-y-auto">
+
+        <!-- Section 0: Introduction (NEW) -->
+        <section id="student-introduction" class="section-content max-w-6xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-gray-900 border-b pb-2">Introduction & Personal Mission</h2>
+            <div id="introduction-content" class="stat-card p-6 grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+                <!-- Content rendered by JS -->
+            </div>
+        </section>
+
+
+        <!-- Section 1: Snapshot Dashboard -->
+        <section id="snapshot-dashboard" class="section-content max-w-6xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-gray-900 border-b pb-2">Snapshot & Impact</h2>
+            <p class="text-gray-600">This dashboard provides a quick, data-driven summary of my current status and overall engagement. This is the **Proof** that I'm investing in my career from day one.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Stat Card: Current Year -->
+                <div class="stat-card p-5">
+                    <p class="text-sm font-medium text-gray-500">Current Status</p>
+                    <p id="stat-year" class="text-3xl font-bold mt-1" style="color: var(--primary-color);">Freshman</p>
+                    <p id="stat-major" class="text-sm text-gray-500 mt-1"></p>
+                </div>
+                <!-- Stat Card: Calculated Impact Score (The Sizzle!) -->
+                <div class="stat-card p-5">
+                    <p class="text-sm font-medium text-gray-500">Calculated Impact Score</p>
+                    <p id="stat-impact" class="text-3xl font-bold mt-1" style="color: var(--supporting-green);">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Reflects engagement across all key areas.</p>
+                </div>
+                <!-- Stat Card: Total Projects -->
+                <div class="stat-card p-5">
+                    <p class="text-sm font-medium text-gray-500">Total Projects Documented</p>
+                    <p id="stat-projects" class="text-3xl font-bold mt-1" style="color: var(--supporting-blue);">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Evidence of problem-solving.</p>
+                </div>
+                <!-- Stat Card: Total Awards -->
+                <div class="stat-card p-5">
+                    <p class="text-sm font-medium text-gray-500">Awards & Recognition</p>
+                    <p id="stat-awards" class="text-3xl font-bold mt-1" style="color: var(--supporting-yellow);">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Formal proof of excellence.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Academic Foundation -->
+        <section id="academic-foundation" class="section-content max-w-6xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-gray-900 border-b pb-2">Academic Foundation</h2>
+            <p class="text-gray-600">My coursework demonstrates the core **Foundational Knowledge** and my technical trajectory. The chart below shows my current standing, while the list details the relevant classes taken.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- GPA Chart -->
+                <div class="stat-card p-4 md:col-span-1 flex flex-col items-center">
+                    <p class="text-sm font-medium text-gray-500 mb-2">Cumulative GPA</p>
+                    <div class="chart-container">
+                        <canvas id="gpaDoughnutChart"></canvas>
+                    </div>
+                    <p id="gpa-value" class="text-3xl font-bold mt-4" style="color: var(--primary-color);"></p>
+                </div>
+
+                <!-- Coursework List -->
+                <div class="stat-card p-6 md:col-span-2">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Relevant Coursework</h3>
+                    <div id="coursework-list" class="space-y-3">
+                        <!-- Content rendered by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Project Showcase (Pillars 1 & 2) -->
+        <section id="project-showcase" class="section-content max-w-6xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-gray-900 border-b pb-2">Project Outcomes (C-S-R Format)</h2>
+            <p class="text-gray-600">These projects show my ability to translate theory into practice (Pillar 1) and my personal initiative (Pillar 2). All entries follow the **Challenge, Solution, Result (C-S-R)** framework to focus on measurable outcomes.</p>
+
+            <!-- Filter Buttons -->
+            <div id="project-filters" class="flex flex-wrap gap-3">
+                <button class="btn-filter px-4 py-2 text-sm font-medium rounded-full border border-gray-300 bg-white active" data-filter="all">Show All</button>
+                <!-- Filters rendered by JS -->
+            </div>
+
+            <!-- Project Cards -->
+            <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Content rendered by JS -->
+            </div>
+        </section>
+
+        <!-- Section 4: Experience & Recognition (Pillars 3 & 4) -->
+        <section id="recognition-experience" class="section-content max-w-6xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-gray-900 border-b pb-2">Experience & Recognition</h2>
+            <p class="text-gray-600">This section provides evidence of **real-world collaboration (Pillar 3)**, leadership, and external recognition, which demonstrate strong soft skills (Pillar 4).</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Experience (Extracurricular, Service, Jobs) -->
+                <div class="stat-card p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800 flex items-center"><span class="text-2xl mr-2">🤝</span> Experience & Service</h3>
+                    <div id="experience-list" class="space-y-4">
+                        <!-- Content rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Awards & Recognition -->
+                <div class="stat-card p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800 flex items-center"><span class="text-2xl mr-2">🏅</span> Awards & Recognition</h3>
+                    <div id="awards-list" class="space-y-4">
+                        <!-- Content rendered by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /* =====================================================================
+        | 1. DATA ZONE: Student-Editable Content (JSON)
+        |    Students should only update the variables and objects below.
+        ===================================================================== */
+
+        // 1.1 PROFILE & BRANDING VARIABLES (REQUIRED)
+        const profileData = {
+            studentName: "Riley Cardinal",
+            tagline: "Future-Focused Problem Solver in Digital Media",
+            currentYear: "Sophomore", // Freshman, Sophomore, Junior, Senior
+            major: "Computer Science & Digital Media",
+            gpa: 3.85,
+            impactScoreMultiplier: 10, // Adjusts how much projects/awards count towards total impact
+            
+            // --- INTRODUCTION & BRANDING FIELDS ---
+            photoUrl: "https://placehold.co/150x150/BA0C2F/FFFFFF/png?text=RILEY+C", // Replace with a URL to a professional headshot
+            logoUrl: "https://placehold.co/40x40/BA0C2F/FFFFFF.png?text=BSU", // URL for your school logo or personal brand icon
+            personalBio: "I am a sophomore driven by the intersection of computational thinking and creative design. My academic focus is on building scalable, user-centric web applications and leveraging data analysis to inform design decisions. I believe in continuous learning and applying classroom theory to immediate, impactful real-world challenges.",
+            missionStatement: "To build digital solutions that simplify complex processes and empower small businesses, leveraging Python, front-end frameworks, and a user-first design approach.",
+        };
+
+        /*
+        | 🛑 HOW-TO-HIGHLIGHT CRITICAL METRICS 🛑
+        | To make any word or number appear in BOLD CARDINAL RED:
+        | 1. Only use two asterisks on each side.
+        | 2. Example: "Achieved an accuracy of **95%**"
+        | This works in the detail fields for PROJECTS, EXPERIENCE, and AWARDS.
+        */
+
+        // 1.2 ACADEMICS (REQUIRED: Add relevant classes)
+        const academicData = [
+            { name: "Intro to Python Programming", grade: "A", semester: "Fall 2024", relevance: "Code" },
+            { name: "Digital Design Principles", grade: "A-", semester: "Fall 2024", relevance: "Design" },
+            { name: "Calculus I", grade: "B+", semester: "Fall 2024", relevance: "Foundational" },
+            { name: "Web Development (Front-End)", grade: "A", semester: "Spring 2025", relevance: "Code" },
+            { name: "Data Structures", grade: "In Progress", semester: "Current", relevance: "Code" },
+        ];
+
+        // 1.3 PROJECTS (REQUIRED: Follow C-S-R format)
+        const projectData = [
+            {
+                title: "Local Charity Website Redesign",
+                category: "Design",
+                challenge: "The local Humane Society site was not mobile-friendly, resulting in high bounce rates on the donation page.",
+                solution: "Designed and implemented a responsive, user-centered interface using HTML, Tailwind CSS, and vanilla JS.",
+                result: "Increased mobile conversion rate by **15%** and reduced bounce rate by **22%** in the first month.",
+                link: "https://github.com/riley/charity-site"
+            },
+            {
+                title: "Twitter Sentiment Analyzer (Academic)",
+                category: "Code",
+                challenge: "Required to analyze public sentiment towards a political topic using programming tools for a final project.",
+                solution: "Used Python (Pandas/Matplotlib) to clean data and built a basic Naive Bayes classification model.",
+                result: "Achieved **82%** accuracy in classifying positive/negative tweets, earning the highest grade in the class (A).",
+                link: ""
+            },
+            {
+                title: "3D Planet Rendering",
+                category: "Code/Personal",
+                challenge: "A personal challenge to learn a new visualization library (three.js) over winter break.",
+                solution: "Created a simple animated model of a rotating planet using three.js, demonstrating coordinate system mastery.",
+                result: "Successfully rendered complex geometry and optimized the animation loop to maintain **60 FPS** on desktop browsers.",
+                link: "https://riley.github.io/planet-render"
+            }
+        ];
+
+        // 1.4 EXPERIENCE & AWARDS (REQUIRED)
+        const recognitionData = {
+            experience: [
+                { title: "Team Lead, Ball State Hackathon", type: "Extracurricular", duration: "Oct 2025", detail: "Led a four-person team to develop a functional prototype in **24 hours**." },
+                { title: "Library Volunteer (IT Support)", type: "Community Service", duration: "Jan - May 2025", detail: "Provided **40+ hours** of technical support for public computers and staff devices." },
+            ],
+            awards: [
+                { title: "Dean's List", duration: "Fall 2024", detail: "Achieved a **3.8 GPA**." },
+                { title: "Rising Star Freshman Award", duration: "Spring 2025", detail: "Recognized by the CS department for high academic achievement and engagement." },
+            ]
+        };
+
+        /* =====================================================================
+        | 2. CORE LOGIC (DO NOT EDIT)
+        ===================================================================== */
+
+        const NAV_LINKS = document.querySelectorAll('.nav-link');
+        let gpaDoughnutChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyBranding();
+            renderAllContent();
+            setupInteractions();
+            initGpaChart();
+            updateDashboardStats();
+        });
+
+        function applyBranding() {
+            document.getElementById('nav-name').textContent = profileData.studentName;
+            document.getElementById('nav-title').textContent = profileData.tagline;
+            document.getElementById('nav-school').textContent = document.documentElement.style.getPropertyValue('--school-name');
+            document.title = `Portfolio Snapshot | ${profileData.studentName}`;
+            
+            // Set Logo URL dynamically
+            const logoElement = document.getElementById('nav-logo');
+            logoElement.src = profileData.logoUrl;
+            logoElement.onerror = function() {
+                // Fallback if logo URL is broken
+                this.src = 'https://placehold.co/40x40/9CA3AF/FFFFFF.png?text=Logo';
+            };
+        }
+
+        function updateDashboardStats() {
+            const numProjects = projectData.length;
+            const numAwards = recognitionData.awards.length;
+            const impactScore = Math.round(
+                (numProjects * 3) +
+                (numAwards * 2) +
+                (profileData.gpa * 5)
+            );
+
+            document.getElementById('stat-year').textContent = profileData.currentYear;
+            document.getElementById('stat-major').textContent = profileData.major;
+            document.getElementById('stat-impact').textContent = impactScore;
+            document.getElementById('stat-projects').textContent = numProjects;
+            document.getElementById('stat-awards').textContent = numAwards;
+            document.getElementById('gpa-value').textContent = `${profileData.gpa.toFixed(2)} / 4.0`;
+        }
+
+        function initGpaChart() {
+            const ctx = document.getElementById('gpaDoughnutChart').getContext('2d');
+            const gpaPercent = (profileData.gpa / 4.0) * 100;
+            const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+
+            gpaDoughnutChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Current GPA', 'Remaining'],
+                    datasets: [{
+                        data: [profileData.gpa, 4.0 - profileData.gpa],
+                        backgroundColor: [primaryColor, '#E5E7EB'],
+                        borderColor: 'white',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    return context.label + ': ' + context.formattedValue;
+                                }
+                            }
+                        },
+                    },
+                }
+            });
+        }
+
+        function renderAllContent() {
+            renderIntroduction();
+            renderAcademicContent();
+            renderExperienceContent();
+            renderProjectCards(projectData); 
+            renderProjectFilters();
+        }
+
+        function renderIntroduction() {
+            const container = document.getElementById('introduction-content');
+            
+            const content = `
+                <div class="md:col-span-1 flex justify-center md:justify-start">
+                    <img src="${profileData.photoUrl}" 
+                         alt="Professional headshot of ${profileData.studentName}"
+                         class="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4" 
+                         onerror="this.onerror=null;this.src='https://placehold.co/150x150/9CA3AF/FFFFFF?text=Photo+Required';"
+                         style="border-color: var(--primary-color);">
+                </div>
+                <div class="md:col-span-3 space-y-4">
+                    <p class="text-lg font-medium text-gray-800 leading-relaxed">${profileData.personalBio}</p>
+                    <div class="p-3 rounded-lg border-l-4" style="border-color: var(--primary-color); background-color: var(--secondary-color);">
+                        <p class="font-semibold text-gray-800">My Mission</p>
+                        <p class="text-sm text-gray-600 italic">${profileData.missionStatement}</p>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = content;
+        }
+
+        function renderAcademicContent() {
+            const listContainer = document.getElementById('coursework-list');
+            listContainer.innerHTML = academicData.map(course => `
+                <div class="flex justify-between items-center text-sm border-b pb-1">
+                    <span class="font-medium">${course.name}</span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style="background-color: var(--accent-color);">${course.relevance}</span>
+                    <span class="text-gray-600">${course.grade} (${course.semester})</span>
+                </div>
+            `).join('');
+        }
+
+        // Helper function to process Markdown-like bold (**text**) into colored HTML
+        function highlightBold(text) {
+            // Refined regex to be more robust, allowing optional spaces before/after asterisks and capturing the text inside.
+            // Replaces **text** with <span class="text-project-highlight">text</span>
+            return text.replace(/\*{2}(.*?)\*{2}/g, '<span class="text-project-highlight">$1</span>');
+        }
+
+        function renderExperienceContent() {
+            const expContainer = document.getElementById('experience-list');
+            const awardContainer = document.getElementById('awards-list');
+
+            // Awards List
+            awardContainer.innerHTML = recognitionData.awards.map(item => {
+                const highlightedDetail = highlightBold(item.detail);
+                return `
+                <div class="flex flex-col border-l-4 pl-4" style="border-color: var(--supporting-yellow);">
+                    <p class="font-semibold text-gray-800">${item.title}</p>
+                    <p class="text-xs text-gray-500">${item.duration}</p>
+                    <p class="text-sm mt-1 text-gray-700">${highlightedDetail}</p>
+                </div>
+                `;
+            }).join('');
+            
+            // Experience List
+            expContainer.innerHTML = recognitionData.experience.map(item => {
+                const highlightedDetail = highlightBold(item.detail);
+                return `
+                <div class="border-l-4 pl-4" style="border-color: var(--primary-color);">
+                    <p class="font-semibold text-gray-800">${item.title}</p>
+                    <p class="text-xs text-gray-500">${item.type} | ${item.duration}</p>
+                    <p class="text-sm mt-1 text-gray-700">${highlightedDetail}</p>
+                </div>
+                `;
+            }).join('');
+        }
+        
+        function renderProjectCards(projects) {
+            const gridContainer = document.getElementById('projects-grid');
+            gridContainer.innerHTML = projects.map(project => {
+                // Apply highlighting to all C-S-R fields
+                const highlightedChallenge = highlightBold(project.challenge);
+                const highlightedSolution = highlightBold(project.solution);
+                const highlightedResult = highlightBold(project.result);
+
+                return `
+                <div class="stat-card p-5 space-y-3 border-t-4" style="border-color: var(--primary-color);" data-category="${project.category}">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-lg text-gray-900">${project.title}</h4>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full text-white" style="background-color: var(--accent-color);">${project.category}</span>
+                    </div>
+
+                    <div class="space-y-2 text-sm">
+                        <p class="font-semibold text-gray-800">Challenge (Context)</p>
+                        <p class="text-gray-600 pl-3 border-l-2 border-gray-200">${highlightedChallenge}</p>
+
+                        <p class="font-semibold text-gray-800 pt-2">Solution (Process)</p>
+                        <p class="text-gray-600 pl-3 border-l-2 border-gray-200">${highlightedSolution}</p>
+
+                        <p class="font-semibold text-gray-800 pt-2">Result (Outcome)</p>
+                        <p class="text-gray-600 pl-3 border-l-2 border-gray-200">${highlightedResult}</p>
+                    </div>
+                    ${project.link ? `<a href="${project.link}" target="_blank" class="mt-3 inline-flex items-center text-sm font-medium hover:text-blue-800" style="color: var(--supporting-blue);">View Demo / Repo <span>&rarr;</span></a>` : '<p class="mt-3 text-sm text-gray-500">No public link available.</p>'}
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderProjectFilters() {
+            const container = document.getElementById('project-filters');
+            const categories = [...new Set(projectData.map(p => p.category))];
+            
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'btn-filter px-4 py-2 text-sm font-medium rounded-full border border-gray-300 bg-white hover:bg-gray-100 transition';
+                button.textContent = category;
+                button.dataset.filter = category;
+                container.appendChild(button);
+            });
+        }
+
+        function setupInteractions() {
+            // Filter Logic
+            document.getElementById('project-filters').addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-filter')) {
+                    document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    const filter = e.target.dataset.filter;
+                    const filteredProjects = filter === 'all' ? projectData : projectData.filter(p => p.category === filter);
+                    renderProjectCards(filteredProjects);
+                }
+            });
+
+            // Initial render of all projects
+            renderProjectCards(projectData);
+            
+            // Scroll Navigation & Active State
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px 0px -50% 0px', 
+                threshold: 0
+            };
+
+            const sections = document.querySelectorAll('.section-content');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const id = entry.target.getAttribute('id');
+                    const navLink = document.querySelector(`.nav-link[onclick*="${id}"]`);
+
+                    if (navLink && entry.isIntersecting) {
+                        NAV_LINKS.forEach(link => link.classList.remove('active'));
+                        navLink.classList.add('active');
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => observer.observe(section));
+        }
+
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    </script>
+</body>
+</html>
